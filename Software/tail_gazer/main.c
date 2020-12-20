@@ -13,20 +13,93 @@
 #include <unistd.h>
 #include <alt_types.h>
 #include <sys/alt_irq.h>
+#include "androtchi_sprite.h"
+#include "display.h"
 
-struct{
-	char r;
-	char g;
-	char b;
-}pixel;
+struct pixel{
+	alt_u8 r;
+	alt_u8 g;
+	alt_u8 b;
+	alt_u8 pad;
+};
+
+alt_u8 snake[32] = {0x00, 0x00, 0x0f, 0x10, 0x20, 0x50, 0x40, 0x40,
+					 0x40, 0x50, 0x20, 0x15, 0x15, 0x15, 0x0A, 0x00,
+					 0x00, 0x0C, 0x82, 0x42, 0x24, 0x24, 0x32, 0x3A,
+					 0x2E, 0x24, 0x40, 0x80, 0x00, 0x00, 0x00, 0x00};
+
+struct pixel buffer[24][48];// = 0;
 
 //struct pixel grid[24][48] =
 void bluetooth_rx_isr (void* context);
-
+void drawPixel(int x, int y, struct pixel colour);
 
 int main()
 {
   printf("Hello from Nios II!\n");
+
+  int x = 0;
+  int y = 0;
+  int pixel[3];
+  char* sprite = robot_normal;
+  int i,j;
+  struct pixel white = {16,16,16};
+  for(y = 0; y < 24; y++){
+	  for(x = 0; x < 48; x++){
+		  drawPixel(x, y, white);
+	  }
+  }
+
+  while(1){
+	  x = 15;
+	  y = 3;
+	  sprite = robot_normal;
+
+	  for(i = 0; i < 16; i++){
+		  for(j = 0; j < 16; j++){
+			  HEADER_PIXEL(sprite, pixel);
+			  buffer[y][x].r = pixel[0];
+			  buffer[y][x].g = pixel[1];
+			  buffer[y][x].b = pixel[2];
+			  if(j == 15){
+				  x = 15;
+				  y++;
+			  }
+			  else{
+				  x++;
+			  }
+		  }
+	  }
+
+	  updateDisplay();
+
+	  usleep(100000);
+	  x = 15;
+	  y = 3;
+	  sprite = robot_mad;
+	  for(i = 0; i < 16; i++){
+		  for(j = 0; j < 16; j++){
+			  HEADER_PIXEL(sprite, pixel);
+			  buffer[y][x].r = pixel[0];
+			  buffer[y][x].g = pixel[1];
+			  buffer[y][x].b = pixel[2];
+			  if(j == 15){
+				  x = 15;
+				  y++;
+			  }
+			  else{
+				  x++;
+			  }
+		  }
+	  }
+	  updateDisplay();
+	  usleep(100000);
+
+  }
+
+
+  /* printf("Size of struct: %u\n", size);
+
   volatile struct altera_avalon_uart_state_s uart;
   uart.base = BLUTOOTH_UART_BASE;
   uart.rx_end = 0;
@@ -64,7 +137,7 @@ int main()
 	  //IOWR_ALTERA_AVALON_PIO_DATA(0x2002800, 0xff);
 	  //usleep(10000);
 	  //cnt++;
-  }
+  //}*/
 
 
 
@@ -79,6 +152,31 @@ void bluetooth_rx_isr(void* context){
 		uart_ptr->rx_end++;
 		if (uart_ptr->rx_end > ALT_AVALON_UART_BUF_LEN) uart_ptr->rx_end = 0;
 	}
+}
+
+void drawPixel(int x, int y, struct pixel colour){
+	buffer[y][x].r = colour.r;
+	buffer[y][x].g = colour.g;
+	buffer[y][x].b = colour.b;
+	buffer[y][x].pad = 0;
+}
+
+void updateDisplay()
+{
+	int i;
+	//Disable display driver
+	IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x00);
+
+	//Copy software buffer to display buffers
+	for(i = 0; i < 8; i++)
+	{
+	  memcpy((void*)(FRAME_MEMORY_1_BASE + (i*PIX_SIZE*48)), (void*)buffer[23-i], (size_t)(PIX_SIZE*48));
+	  memcpy((void*)(FRAME_MEMORY_2_BASE + (i*PIX_SIZE*48)), (void*)buffer[15-i], (size_t)(PIX_SIZE*48));
+	  memcpy((void*)(FRAME_MEMORY_3_BASE + (i*PIX_SIZE*48)), (void*)buffer[7-i], (size_t)(PIX_SIZE*48));
+	}
+
+	//Enable Display driver
+	IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0xff);
 }
 
 
