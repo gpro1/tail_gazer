@@ -13,8 +13,9 @@
 #include <unistd.h>
 #include <alt_types.h>
 #include <sys/alt_irq.h>
-#include "androtchi_sprite.h"
+//#include "androtchi_sprite.h"
 #include "display.h"
+#include "font_default.h"
 
 struct pixel{
 	alt_u8 r;
@@ -33,6 +34,8 @@ struct pixel buffer[24][48];// = 0;
 //struct pixel grid[24][48] =
 void bluetooth_rx_isr (void* context);
 void drawPixel(int x, int y, struct pixel colour);
+void drawChar(alt_u8 x, alt_u8 y, char c);
+void updateDisplay();
 
 int main()
 {
@@ -41,7 +44,7 @@ int main()
   int x = 0;
   int y = 0;
   int pixel[3];
-  char* sprite = robot_normal;
+  //char* sprite = robot_normal;
   int i,j;
   struct pixel white = {16,16,16};
   for(y = 0; y < 24; y++){
@@ -50,7 +53,11 @@ int main()
 	  }
   }
 
-  while(1){
+  //drawChar(1, 3, 'H');
+  updateDisplay();
+
+
+ /* while(1){
 	  x = 15;
 	  y = 3;
 	  sprite = robot_normal;
@@ -95,10 +102,11 @@ int main()
 	  updateDisplay();
 	  usleep(100000);
 
-  }
+  }*/
 
 
-  /* printf("Size of struct: %u\n", size);
+  x = 1;
+  y = 3;
 
   volatile struct altera_avalon_uart_state_s uart;
   uart.base = BLUTOOTH_UART_BASE;
@@ -109,18 +117,21 @@ int main()
   char data[3];
   while(1){
 
-	  if(uart.rx_end >= 3){
+	  if(uart.rx_end >= 1){
 		  alt_ic_irq_disable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
 		  	  data[0] = uart.rx_buf[0];
-		  	  data[1] = uart.rx_buf[1];
-		  	  data[2] = uart.rx_buf[2];
+		  	  //data[1] = uart.rx_buf[1];
+		  	  //data[2] = uart.rx_buf[2];
 		  	  uart.rx_end = 0;
 		  alt_ic_irq_enable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
+		  drawChar(x,y,data[0]);
+		  updateDisplay();
+		  x+=6;
 
-		  printf("Red: %u Green %u: Blue %u\n", (alt_u8)data[0], (alt_u8)data[1], (alt_u8)data[2]);
-		  IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x00);
-		  memcpy(FRAME_MEMORY_2_BASE, &data, sizeof(data));
-		  IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0xff);
+		  //printf("Red: %u Green %u: Blue %u\n", (alt_u8)data[0], (alt_u8)data[1], (alt_u8)data[2]);
+		  //IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x00);
+		  //memcpy(FRAME_MEMORY_2_BASE, &data, sizeof(data));
+		  //IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0xff);
 	  }
 	  //cnt = altera_avalon_uart_read(&uart, &data, 1, 0);
 	  //printf("Red: %u\n", (int)data);
@@ -137,7 +148,7 @@ int main()
 	  //IOWR_ALTERA_AVALON_PIO_DATA(0x2002800, 0xff);
 	  //usleep(10000);
 	  //cnt++;
-  //}*/
+  }
 
 
 
@@ -159,6 +170,31 @@ void drawPixel(int x, int y, struct pixel colour){
 	buffer[y][x].g = colour.g;
 	buffer[y][x].b = colour.b;
 	buffer[y][x].pad = 0;
+}
+
+void drawChar(alt_u8 x, alt_u8 y, char c)
+{
+	struct pixel color = {150, 50, 29};
+	struct pixel bg	   = {16 ,16, 16};
+	alt_u8 i,j;
+	 for(i = 0; i < 6; i++ )
+	 {
+		alt_u8 line;
+		if(i < 5) line = *(font+(c*5)+i);
+		else      line = 0x0;
+
+		for(j = 0; j < 8; j++, line >>= 1)
+		{
+			if(line & 0x1)
+			{
+				drawPixel(x+i, y+j, color);
+			}
+			else
+			{
+			   drawPixel(x+i, y+j, bg);
+			}
+		}
+	 }
 }
 
 void updateDisplay()
