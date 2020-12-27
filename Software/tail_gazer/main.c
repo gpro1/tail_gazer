@@ -36,6 +36,7 @@ void bluetooth_rx_isr (void* context);
 void drawPixel(int x, int y, struct pixel colour);
 void drawChar(alt_u8 x, alt_u8 y, char c);
 void updateDisplay();
+void drawBitmap();
 
 int main()
 {
@@ -53,56 +54,10 @@ int main()
 	  }
   }
 
-  //drawChar(1, 3, 'H');
   updateDisplay();
 
 
- /* while(1){
-	  x = 15;
-	  y = 3;
-	  sprite = robot_normal;
 
-	  for(i = 0; i < 16; i++){
-		  for(j = 0; j < 16; j++){
-			  HEADER_PIXEL(sprite, pixel);
-			  buffer[y][x].r = pixel[0];
-			  buffer[y][x].g = pixel[1];
-			  buffer[y][x].b = pixel[2];
-			  if(j == 15){
-				  x = 15;
-				  y++;
-			  }
-			  else{
-				  x++;
-			  }
-		  }
-	  }
-
-	  updateDisplay();
-
-	  usleep(100000);
-	  x = 15;
-	  y = 3;
-	  sprite = robot_mad;
-	  for(i = 0; i < 16; i++){
-		  for(j = 0; j < 16; j++){
-			  HEADER_PIXEL(sprite, pixel);
-			  buffer[y][x].r = pixel[0];
-			  buffer[y][x].g = pixel[1];
-			  buffer[y][x].b = pixel[2];
-			  if(j == 15){
-				  x = 15;
-				  y++;
-			  }
-			  else{
-				  x++;
-			  }
-		  }
-	  }
-	  updateDisplay();
-	  usleep(100000);
-
-  }*/
 
 
   x = 1;
@@ -113,41 +68,28 @@ int main()
   uart.rx_end = 0;
   alt_ic_isr_register(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ, bluetooth_rx_isr, &uart, 0x0);
   alt_ic_irq_enable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
-  //int cnt = 0;
-  char data[3];
+  int index = 0;
+  char data[256];
   while(1){
-
-	  if(uart.rx_end >= 1){
+	  usleep(100);
+	  if(uart.rx_buf[uart.rx_end - 1] == 0x0a){
 		  alt_ic_irq_disable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
-		  	  data[0] = uart.rx_buf[0];
-		  	  //data[1] = uart.rx_buf[1];
-		  	  //data[2] = uart.rx_buf[2];
+		  	  memcpy(data, uart.rx_buf, uart.rx_end);
+		  	  index = uart.rx_end - 1;
 		  	  uart.rx_end = 0;
 		  alt_ic_irq_enable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
-		  drawChar(x,y,data[0]);
+
+		  int i = 0;
+		  while(i < index)
+		  {
+			  drawChar(x,y,data[i]);
+			  x+=6;
+			  i++;
+		  }
 		  updateDisplay();
-		  x+=6;
 
-		  //printf("Red: %u Green %u: Blue %u\n", (alt_u8)data[0], (alt_u8)data[1], (alt_u8)data[2]);
-		  //IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x00);
-		  //memcpy(FRAME_MEMORY_2_BASE, &data, sizeof(data));
-		  //IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0xff);
 	  }
-	  //cnt = altera_avalon_uart_read(&uart, &data, 1, 0);
-	  //printf("Red: %u\n", (int)data);
-	  /*cnt = altera_avalon_uart_read(&uart, data[1], 1, 0);
-	  printf("Green: %u\n", data[1]);
-	  cnt = altera_avalon_uart_read(&uart, data[2], 1, 0);
-	  printf("Blue: %u\n", data[2]);
-	  //IOWR_ALTERA_AVALON_PIO_DATA(PIO_LED_BASE, data & 0xff);*/
 
-
-	  //cnt = altera_avalon_uart_write(&uart, &data, 3, 0);
-	  //IOWR_ALTERA_AVALON_PIO_DATA(0x2002800, 0x00);
-	 // memcpy(0x2002000, &data, sizeof(data));
-	  //IOWR_ALTERA_AVALON_PIO_DATA(0x2002800, 0xff);
-	  //usleep(10000);
-	  //cnt++;
   }
 
 
@@ -195,6 +137,55 @@ void drawChar(alt_u8 x, alt_u8 y, char c)
 			}
 		}
 	 }
+}
+
+void drawBitmap(){
+	 /* while(1){
+		  x = 15;
+		  y = 3;
+		  sprite = robot_normal;
+
+		  for(i = 0; i < 16; i++){
+			  for(j = 0; j < 16; j++){
+				  HEADER_PIXEL(sprite, pixel);
+				  buffer[y][x].r = pixel[0];
+				  buffer[y][x].g = pixel[1];
+				  buffer[y][x].b = pixel[2];
+				  if(j == 15){
+					  x = 15;
+					  y++;
+				  }
+				  else{
+					  x++;
+				  }
+			  }
+		  }
+
+		  updateDisplay();
+
+		  usleep(100000);
+		  x = 15;
+		  y = 3;
+		  sprite = robot_mad;
+		  for(i = 0; i < 16; i++){
+			  for(j = 0; j < 16; j++){
+				  HEADER_PIXEL(sprite, pixel);
+				  buffer[y][x].r = pixel[0];
+				  buffer[y][x].g = pixel[1];
+				  buffer[y][x].b = pixel[2];
+				  if(j == 15){
+					  x = 15;
+					  y++;
+				  }
+				  else{
+					  x++;
+				  }
+			  }
+		  }
+		  updateDisplay();
+		  usleep(100000);
+
+	  }*/
 }
 
 void updateDisplay()
