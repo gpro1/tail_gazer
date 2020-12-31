@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <alt_types.h>
 #include <sys/alt_irq.h>
-//#include "androtchi_sprite.h"
+#include "androtchi_sprite.h"
 #include "display.h"
 #include "font_default.h"
 
@@ -36,7 +36,9 @@ void bluetooth_rx_isr (void* context);
 void drawPixel(int x, int y, struct pixel colour);
 void drawChar(alt_u8 x, alt_u8 y, char c);
 void updateDisplay();
-void drawBitmap();
+void drawBitmap(alt_u8 width, alt_u8 height, char * bitmap);
+void loadBitmapHeader(alt_u8 width, alt_u8 height, char * bitmap);
+void toggleGamma(alt_u8 state);
 
 int main()
 {
@@ -45,7 +47,7 @@ int main()
   int x = 0;
   int y = 0;
   int pixel[3];
-  //char* sprite = robot_normal;
+  char* sprite = mona;
   int i,j;
   struct pixel white = {16,16,16};
   for(y = 0; y < 24; y++){
@@ -53,14 +55,34 @@ int main()
 		  drawPixel(x, y, white);
 	  }
   }
-
+  loadBitmapHeader(48, 24, sprite);
   updateDisplay();
 
+  volatile struct altera_avalon_uart_state_s uart;
+  uart.base = BLUTOOTH_UART_BASE;
+  uart.rx_end = 0;
+  alt_ic_isr_register(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ, bluetooth_rx_isr, &uart, 0x0);
+  alt_ic_irq_enable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
+  int index = 0;
+  char data[256];
+  while(1){
+	  usleep(100);
+	  if(uart.rx_buf[uart.rx_end - 1] == 0x0a){
+		  alt_ic_irq_disable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
+		  	  memcpy(data, uart.rx_buf, uart.rx_end);
+		  	  index = uart.rx_end - 1;
+		  	  uart.rx_end = 0;
+		  alt_ic_irq_enable(BLUTOOTH_UART_IRQ_INTERRUPT_CONTROLLER_ID, BLUTOOTH_UART_IRQ);
+
+		  toggleGamma(data[0]);
+
+	  }
+
+  }
 
 
 
-
-  x = 1;
+  /*x = 1;
   y = 3;
 
   volatile struct altera_avalon_uart_state_s uart;
@@ -90,7 +112,7 @@ int main()
 
 	  }
 
-  }
+  }*/
 
 
 
@@ -139,7 +161,7 @@ void drawChar(alt_u8 x, alt_u8 y, char c)
 	 }
 }
 
-void drawBitmap(){
+void drawBitmap(alt_u8 width, alt_u8 height, char * bitmap){
 	 /* while(1){
 		  x = 15;
 		  y = 3;
@@ -188,6 +210,34 @@ void drawBitmap(){
 	  }*/
 }
 
+void loadBitmapHeader(alt_u8 width, alt_u8 height, char * bitmap)
+{
+	alt_u8 x = 0;
+	alt_u8 y = 0;
+	alt_u8 i,j;
+	int pixel[3];
+
+	for(i = 0; i < height; i++)
+	{
+	  for(j = 0; j < width; j++)
+	  {
+		  HEADER_PIXEL(bitmap, pixel);
+		  buffer[y][x].r = pixel[0];
+		  buffer[y][x].g = pixel[1];
+		  buffer[y][x].b = pixel[2];
+		  if(j == width - 1)
+		  {
+			  x = 0;
+			  y++;
+		  }
+		  else
+		  {
+			  x++;
+		  }
+	  }
+	}
+}
+
 void updateDisplay()
 {
 	int i;
@@ -203,8 +253,19 @@ void updateDisplay()
 	}
 
 	//Enable Display driver
-	IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0xff);
+	IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x01);
 }
 
-
+//toggle hardware gamma correction on the display
+void toggleGamma(alt_u8 state)
+{
+	if(state == 0x31)
+	{
+		IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x03);
+	}
+	else
+	{
+		IOWR_ALTERA_AVALON_PIO_DATA(DISPLAY_DRIVER_CONTROL_BASE, 0x01);
+	}
+}
 

@@ -51,6 +51,7 @@ signal nios_in		: std_logic_vector (7 downto 0);
 signal nios_out	: std_logic_vector (7 downto 0);
 
 signal driver_en	: std_logic;
+signal gamma_cor	: std_logic;
 
 
 component DE0_NANO_SOPC is
@@ -109,24 +110,26 @@ component DE0_NANO_SOPC is
 begin
 
 driver_en <= nios_out(0);
+gamma_cor <= nios_out(1);
 
 LED_DRIVER: entity work.display_driver(display_driver)
 port map (
-	clk_50 	=> clock_50,
-	en			=> driver_en,
-	addr1 	=> addr1,
-	addr2 	=> addr2,
-	addr3 	=> addr3,
-	ram1_out => ram1_out,
-	ram2_out => ram2_out,
-	ram3_out => ram3_out,
-	abc 		=> abc,
-	rgb1 		=> rgb1,
-	rgb2 		=> rgb2,
-	rgb3 		=> rgb3,
-	oe_n 		=> oe_n,
-	out_clk 	=> out_clk,
-	lat 		=> lat
+	clk_50 		=> clock_50,
+	en				=> driver_en,
+	gamma_cor	=> gamma_cor,
+	addr1 		=> addr1,
+	addr2 		=> addr2,
+	addr3 		=> addr3,
+	ram1_out 	=> ram1_out,
+	ram2_out 	=> ram2_out,
+	ram3_out 	=> ram3_out,
+	abc 			=> abc,
+	rgb1 			=> rgb1,
+	rgb2 			=> rgb2,
+	rgb3 			=> rgb3,
+	oe_n 			=> oe_n,
+	out_clk 		=> out_clk,
+	lat 			=> lat
 );
 
 MCU : component DE0_NANO_SOPC
